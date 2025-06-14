@@ -1,0 +1,15 @@
+psycopg2-binary==2.9.7
+python-magic==0.4.27
+tqdm==4.66.1
+python-dotenv==1.0.0
+argparse
+pathlib
+hashlib
+
+# MarkItDown for document conversion
+markitdown[all]==0.1.2
+
+# Additional dependencies for text processing and chunking
+tiktoken==0.8.0
+langchain-text-splitters==0.3.2
+markdown==3.7
