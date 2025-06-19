@@ -11,11 +11,11 @@ class Config:
     DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_PORT = os.getenv('DB_PORT', '5432')
     DB_NAME = os.getenv('DB_NAME', 'file_metadata')
-    DB_USER = os.getenv('DB_USER', 'postgres')
-    DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+    DB_USER = os.getenv('DB_USER', 'erathiachia')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', 'passw0rd')
 
     # Target directory for scanning
-    TARGET_DIRECTORY = "/Volumes/homes/Erathia/Career"
+    TARGET_DIRECTORY = "/Users/erathiachia/Desktop/test"
 
     # Processing settings
     BATCH_SIZE = 1000  # Number of records to insert at once

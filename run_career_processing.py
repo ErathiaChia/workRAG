@@ -2,15 +2,8 @@
 """
 Career Document Processing Script
 
-A simple runner script to process career documents using MarkItDown and store them in PostgreSQL
+A simple runner script to process job responsibilities, meeting notes, presentation slides, tender, proposal documents using MarkItDown and store them in PostgreSQL
 with intelligent document structure-based chunking.
-
-This script is specifically optimized for career-related documents like:
-- Resumes/CVs
-- Job descriptions
-- Cover letters
-- Performance reviews
-- Career assessments
 """
 
 import sys
@@ -26,7 +19,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         # If no arguments provided, set up defaults for career processing
         sys.argv.extend([
-            "--directory", "/Volumes/homes/Erathia/Career",
+            "--directory", "'/Volumes/homes/Erathia/Career/13 VisionTech/03 Ops/03 Powerpoint/01 Presales Deck/01 PSG'",
             "--create-schema",
             "--chunk-size", "800",  # Smaller chunks for better semantic coherence
             "--max-chunk-size", "1500",
@@ -34,7 +27,7 @@ if __name__ == "__main__":
         ])
 
         print("🚀 Running Career Document Processing with default settings:")
-        print("   Directory: /Volumes/homes/Erathia/Career")
+        print("   Directory: '/Volumes/homes/Erathia/Career/13 VisionTech/03 Ops/03 Powerpoint/01 Presales Deck/01 PSG'")
         print("   Chunk size: 800 characters (target)")
         print("   Max chunk size: 1500 characters")
         print("   Creating database schema if needed")

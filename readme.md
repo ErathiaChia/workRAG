@@ -12,10 +12,11 @@ workRAG is a two-component system designed to:
 
 ### Components
 
-#### 1. Data Preprocessing Pipeline
+#### 1. Enhanced Data Preprocessing Pipeline
+- **Microsoft MarkItDown Integration**: Converts PDFs, Word docs, PowerPoint, Excel, and more to structured Markdown
+- **Generic Document Structure-Based Chunking**: Intelligent chunking that preserves document structure and meaning, suitable for all types of work documents (presentations, proposals, meeting notes, etc.)
 - **Automated scheduling**: Weekly data processing runs
-- **Intelligent chunking**: Optimized information segmentation strategies
-- **Database integration**: Seamless PostgreSQL storage
+- **Database integration**: RAG-optimized PostgreSQL storage with content and chunks tables
 
 #### 2. MCP Server
 - **Protocol**: Model Context Protocol (Anthropic)
@@ -59,8 +60,9 @@ cd workRAG
 ### 2. Setup Environment
 ```bash
 # Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+conda create -n workRag
+
+conda activate workRag
 
 # Install dependencies
 pip install -r requirements.txt
@@ -80,14 +82,29 @@ pip install -r requirements.txt
 
 ## 🔧 Usage
 
-### Data Preprocessing
+### Enhanced Data Preprocessing with MarkItDown
 ```bash
-# Run data preprocessing pipeline
-python data_preprocessing/main.py
+# Quick start for document processing (with defaults)
+python run_career_processing.py
+
+# Run with custom settings
+python data_preprocessing/enhanced_preprocessing.py --directory "/path/to/documents" --chunk-size 800
+
+# Legacy metadata-only processing
+python data_preprocessing/preprocessing.py
+
+# Database setup (run once)
+python data_preprocessing/setup_database.py
 
 # Schedule weekly runs
 # Configure cron job or task scheduler
 ```
+
+#### Processing Features:
+- **File Type Support**: PDF, DOCX, PPTX, XLSX, TXT, HTML, images (with OCR), audio (with transcription)
+- **Chunking Strategies**: Generic structure-based chunking for all document types
+- **Database Schema**: Files metadata, document content, and semantic chunks
+- **Progress Tracking**: Real-time progress bars and detailed logging
 
 ### MCP Server
 ```bash
@@ -128,3 +145,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 For support, please open an issue in the GitHub repository or contact the maintainers.
+
+## Clearing the Database
+
+To remove all data from your PostgreSQL database (including all file metadata, content, and chunks), use the provided script:
+
+```bash
+python data_preprocessing/clear_database.py
+```
+
+You will be prompted for confirmation before any data is deleted. This operation cannot be undone.
+
+**Warning:** This will permanently delete all data from the following tables:
+- content_chunks
+- document_content
+- file_metadata
+- scan_sessions
+- file_duplicates

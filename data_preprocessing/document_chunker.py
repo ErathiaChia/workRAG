@@ -3,7 +3,7 @@
 Document Structure-Based Chunking Module
 
 This module implements intelligent chunking strategies that preserve document structure,
-particularly optimized for career-related documents like resumes, job descriptions, etc.
+particularly optimized for career-related documents like job responsibilities, meeting notes, presentation slides, tender, proposal documents.
 """
 
 import re
@@ -24,54 +24,14 @@ class DocumentChunk:
     end_position: int
     chunk_size: int
     chunk_type: str = "content"  # 'content', 'header', 'section', 'list', 'table'
-    metadata: Dict[str, Any] = None
     overlap_with_previous: int = 0
 
     def __post_init__(self):
-        if self.metadata is None:
-            self.metadata = {}
         if self.chunk_size == 0:
             self.chunk_size = len(self.chunk_text)
 
 class DocumentStructureChunker:
-    """Implements document structure-based chunking with career document optimization"""
-
-    # Career-specific section patterns
-    CAREER_SECTION_PATTERNS = {
-        'contact': [
-            r'^\s*(contact|personal)\s*(information|details|info)?\s*$',
-            r'^\s*(phone|email|address|linkedin|portfolio)\s*$'
-        ],
-        'objective': [
-            r'^\s*(career\s+)?(objective|summary|goal|profile)\s*$',
-            r'^\s*professional\s+(summary|profile|overview)\s*$'
-        ],
-        'experience': [
-            r'^\s*(work\s+)?(experience|employment|history)\s*$',
-            r'^\s*professional\s+experience\s*$',
-            r'^\s*employment\s+(history|record)\s*$'
-        ],
-        'education': [
-            r'^\s*education(al\s+background)?\s*$',
-            r'^\s*academic\s+(background|qualifications)\s*$'
-        ],
-        'skills': [
-            r'^\s*(technical\s+)?skills\s*$',
-            r'^\s*(core\s+)?(competencies|abilities)\s*$'
-        ],
-        'projects': [
-            r'^\s*(key\s+)?projects?\s*$',
-            r'^\s*notable\s+work\s*$'
-        ],
-        'achievements': [
-            r'^\s*(achievements?|accomplishments?|awards?)\s*$',
-            r'^\s*recognition\s*$'
-        ],
-        'certifications': [
-            r'^\s*certifications?\s*$',
-            r'^\s*licenses?\s*$'
-        ]
-    }
+    """Implements generic document structure-based chunking for a wide variety of work documents."""
 
     def __init__(self,
                  target_chunk_size: int = 1000,
@@ -91,11 +51,12 @@ class DocumentStructureChunker:
             'chunk_types': {}
         }
 
-    def chunk_document(self, content_text: str, file_path: str = "") -> List[DocumentChunk]:
-        """Main chunking method that applies structure-based chunking"""
+    def chunk_document(self, content_text: str, file_path: str = "", parent_directory: str = "") -> List[DocumentChunk]:
+        """Main chunking method that applies generic structure-based chunking"""
         try:
             if not content_text or not content_text.strip():
                 logger.warning(f"Empty or whitespace-only content for {file_path}")
+                logger.debug(f"[DEBUG] Content text is empty or whitespace for {file_path}")
                 return []
 
             # Clean the markdown content
@@ -104,22 +65,11 @@ class DocumentStructureChunker:
             # Extract document structure
             structure_metadata = MarkdownContentProcessor.extract_metadata_from_markdown(cleaned_content)
 
-            # Determine document type based on content
-            doc_type = self._detect_document_type(cleaned_content, file_path)
-
-            # Apply appropriate chunking strategy
-            if doc_type == 'resume':
-                chunks = self._chunk_resume(cleaned_content, structure_metadata)
-            elif doc_type == 'job_description':
-                chunks = self._chunk_job_description(cleaned_content, structure_metadata)
-            elif doc_type == 'cover_letter':
-                chunks = self._chunk_cover_letter(cleaned_content, structure_metadata)
-            else:
-                # Fall back to generic structure-based chunking
-                chunks = self._chunk_generic_document(cleaned_content, structure_metadata)
+            # Always use generic structure-based chunking
+            chunks = self._chunk_generic_document(cleaned_content, structure_metadata, file_path, parent_directory)
 
             # Post-process chunks
-            chunks = self._post_process_chunks(chunks, doc_type)
+            chunks = self._post_process_chunks(chunks)
 
             # Update statistics
             self.stats['documents_processed'] += 1
@@ -135,211 +85,51 @@ class DocumentStructureChunker:
             if len(chunks) > 0:
                 self.stats['avg_chunk_size'] = total_size / len(chunks)
 
-            logger.info(f"Created {len(chunks)} chunks for {file_path} (type: {doc_type})")
+            logger.info(f"Created {len(chunks)} chunks for {file_path}")
             return chunks
 
         except Exception as e:
             logger.error(f"Failed to chunk document {file_path}: {e}")
             return []
 
-    def _detect_document_type(self, content: str, file_path: str) -> str:
-        """Detect the type of career document"""
-        content_lower = content.lower()
-
-        # Resume indicators
-        resume_indicators = [
-            'education', 'experience', 'skills', 'objective', 'summary',
-            'employment', 'qualifications', 'achievements', 'certifications'
-        ]
-        resume_score = sum(1 for indicator in resume_indicators if indicator in content_lower)
-
-        # Job description indicators
-        job_indicators = [
-            'requirements', 'responsibilities', 'qualifications', 'benefits',
-            'position', 'role', 'company', 'salary', 'job description'
-        ]
-        job_score = sum(1 for indicator in job_indicators if indicator in content_lower)
-
-        # Cover letter indicators
-        cover_indicators = [
-            'dear', 'sincerely', 'position', 'application', 'interested',
-            'opportunity', 'thank you', 'looking forward'
-        ]
-        cover_score = sum(1 for indicator in cover_indicators if indicator in content_lower)
-
-        # File name hints
-        file_name_lower = file_path.lower()
-        if any(word in file_name_lower for word in ['resume', 'cv']):
-            resume_score += 3
-        elif any(word in file_name_lower for word in ['job', 'posting', 'description']):
-            job_score += 3
-        elif any(word in file_name_lower for word in ['cover', 'letter']):
-            cover_score += 3
-
-        # Determine document type
-        max_score = max(resume_score, job_score, cover_score)
-        if max_score >= 3:
-            if resume_score == max_score:
-                return 'resume'
-            elif job_score == max_score:
-                return 'job_description'
-            elif cover_score == max_score:
-                return 'cover_letter'
-
-        return 'generic'
-
-    def _chunk_resume(self, content: str, structure_metadata: Dict) -> List[DocumentChunk]:
-        """Chunk resume documents by logical sections"""
+    def _chunk_generic_document(self, content: str, structure_metadata: Dict, file_path: str, parent_directory: str) -> List[DocumentChunk]:
+        """Generic structure-based chunking for all document types"""
         chunks = []
-        lines = content.split('\n')
-        current_section = None
-        section_content = []
-        section_start = 0
-        chunk_index = 0
-
-        for i, line in enumerate(lines):
-            line_stripped = line.strip()
-
-            # Check if this line is a section header
-            detected_section = self._detect_career_section(line_stripped)
-
-            if detected_section and current_section is not None:
-                # Save previous section as chunk
-                if section_content:
-                    section_text = '\n'.join(section_content).strip()
-                    if len(section_text) >= self.min_chunk_size:
-                        chunk = self._create_chunk(
-                            section_text, chunk_index, 'section_based',
-                            section_start, i, current_section
-                        )
-                        chunk.metadata.update({
-                            'section_type': current_section,
-                            'document_type': 'resume'
-                        })
-                        chunks.append(chunk)
-                        chunk_index += 1
-
-                # Start new section
-                current_section = detected_section
-                section_content = [line]
-                section_start = i
-            else:
-                if current_section is None:
-                    current_section = 'header'
-                    section_start = i
-                section_content.append(line)
-
-        # Handle the last section
-        if section_content:
-            section_text = '\n'.join(section_content).strip()
-            if len(section_text) >= self.min_chunk_size:
-                chunk = self._create_chunk(
-                    section_text, chunk_index, 'section_based',
-                    section_start, len(lines), current_section or 'content'
-                )
-                chunk.metadata.update({
-                    'section_type': current_section or 'content',
-                    'document_type': 'resume'
-                })
-                chunks.append(chunk)
-
-        return chunks
-
-    def _chunk_job_description(self, content: str, structure_metadata: Dict) -> List[DocumentChunk]:
-        """Chunk job description documents"""
-        chunks = []
-
-        # Common job description sections
-        job_sections = [
-            'job title', 'company', 'overview', 'description', 'responsibilities',
-            'requirements', 'qualifications', 'skills', 'benefits', 'salary',
-            'location', 'employment type'
-        ]
-
-        # Try to split by obvious sections first
-        section_chunks = self._split_by_headers(content, structure_metadata)
-
-        if len(section_chunks) < 2:
-            # If no clear sections, split by content blocks
-            section_chunks = self._split_by_content_blocks(content)
-
-        for i, chunk_text in enumerate(section_chunks):
-            if len(chunk_text.strip()) >= self.min_chunk_size:
-                chunk = self._create_chunk(
-                    chunk_text, i, 'content_based', 0, len(chunk_text), 'content'
-                )
-                chunk.metadata.update({
-                    'document_type': 'job_description',
-                    'section_index': i
-                })
-                chunks.append(chunk)
-
-        return chunks
-
-    def _chunk_cover_letter(self, content: str, structure_metadata: Dict) -> List[DocumentChunk]:
-        """Chunk cover letter documents by paragraphs"""
-        chunks = []
-
-        # Split by paragraphs (double newlines)
-        paragraphs = re.split(r'\n\s*\n', content.strip())
-
-        chunk_index = 0
-        current_position = 0
-
-        for paragraph in paragraphs:
-            paragraph = paragraph.strip()
-            if len(paragraph) >= self.min_chunk_size:
-                chunk = self._create_chunk(
-                    paragraph, chunk_index, 'paragraph_based',
-                    current_position, current_position + len(paragraph), 'paragraph'
-                )
-                chunk.metadata.update({
-                    'document_type': 'cover_letter',
-                    'paragraph_index': chunk_index
-                })
-                chunks.append(chunk)
-                chunk_index += 1
-
-            current_position += len(paragraph) + 2  # Account for newlines
-
-        return chunks
-
-    def _chunk_generic_document(self, content: str, structure_metadata: Dict) -> List[DocumentChunk]:
-        """Generic structure-based chunking for other document types"""
-        chunks = []
+        running_pos = 0
 
         # First try to split by headers
         header_chunks = self._split_by_headers(content, structure_metadata)
 
         if len(header_chunks) >= 2:
             for i, chunk_text in enumerate(header_chunks):
-                if len(chunk_text.strip()) >= self.min_chunk_size:
+                chunk_text_stripped = chunk_text.strip()
+                if len(chunk_text_stripped) >= self.min_chunk_size:
+                    start_pos = content.find(chunk_text_stripped, running_pos)
+                    if start_pos == -1:
+                        start_pos = running_pos
+                    end_pos = start_pos + len(chunk_text_stripped)
                     chunk = self._create_chunk(
-                        chunk_text, i, 'header_based', 0, len(chunk_text), 'section'
+                        chunk_text_stripped, i, 'header_based', start_pos, end_pos, 'section'
                     )
                     chunks.append(chunk)
+                    running_pos = end_pos
         else:
             # Fall back to content block splitting
             content_chunks = self._split_by_content_blocks(content)
             for i, chunk_text in enumerate(content_chunks):
-                if len(chunk_text.strip()) >= self.min_chunk_size:
+                chunk_text_stripped = chunk_text.strip()
+                if len(chunk_text_stripped) >= self.min_chunk_size:
+                    start_pos = content.find(chunk_text_stripped, running_pos)
+                    if start_pos == -1:
+                        start_pos = running_pos
+                    end_pos = start_pos + len(chunk_text_stripped)
                     chunk = self._create_chunk(
-                        chunk_text, i, 'content_based', 0, len(chunk_text), 'content'
+                        chunk_text_stripped, i, 'content_based', start_pos, end_pos, 'content'
                     )
                     chunks.append(chunk)
+                    running_pos = end_pos
 
         return chunks
-
-    def _detect_career_section(self, line: str) -> Optional[str]:
-        """Detect if a line represents a career document section header"""
-        line_clean = line.lower().strip()
-
-        for section_type, patterns in self.CAREER_SECTION_PATTERNS.items():
-            for pattern in patterns:
-                if re.match(pattern, line_clean, re.IGNORECASE):
-                    return section_type
-
-        return None
 
     def _split_by_headers(self, content: str, structure_metadata: Dict) -> List[str]:
         """Split content by markdown headers"""
@@ -412,11 +202,10 @@ class DocumentStructureChunker:
             start_position=start_pos,
             end_position=end_pos,
             chunk_size=len(text.strip()),
-            chunk_type=chunk_type,
-            metadata={}
+            chunk_type=chunk_type
         )
 
-    def _post_process_chunks(self, chunks: List[DocumentChunk], doc_type: str) -> List[DocumentChunk]:
+    def _post_process_chunks(self, chunks: List[DocumentChunk]) -> List[DocumentChunk]:
         """Post-process chunks to handle edge cases"""
         if not chunks:
             return chunks
@@ -474,8 +263,7 @@ class DocumentStructureChunker:
                     start_position=chunk.start_position,
                     end_position=chunk.start_position + len(sub_chunk_text),
                     chunk_size=len(sub_chunk_text),
-                    chunk_type=chunk.chunk_type,
-                    metadata=chunk.metadata.copy()
+                    chunk_type=chunk.chunk_type
                 )
                 sub_chunks.append(sub_chunk)
 
@@ -496,8 +284,7 @@ class DocumentStructureChunker:
                 start_position=chunk.start_position,
                 end_position=chunk.end_position,
                 chunk_size=len(sub_chunk_text),
-                chunk_type=chunk.chunk_type,
-                metadata=chunk.metadata.copy()
+                chunk_type=chunk.chunk_type
             )
             sub_chunks.append(sub_chunk)
 

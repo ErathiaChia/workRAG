@@ -1,10 +1,7 @@
 psycopg2-binary==2.9.7
 python-magic==0.4.27
 tqdm==4.66.1
-python-dotenv==1.0.0
-argparse
-pathlib
-hashlib
+python-dotenv==1.0.1
 
 # MarkItDown for document conversion
 markitdown[all]==0.1.2

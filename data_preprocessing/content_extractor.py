@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from markitdown import MarkItDown
 from config import Config
+import openai
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -24,20 +26,22 @@ class ContentExtractor:
         # Office Documents
         '.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls',
         # Text formats
-        '.txt', '.md', '.csv', '.json', '.xml', '.html', '.htm',
+        '.txt', '.md', '.csv', '.json',
+        # '.xml', '.html', '.htm',
         # Email
-        '.msg', '.eml',
+        # '.msg', '.eml',
         # Images (with OCR)
         '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff',
         # Audio (with transcription)
-        '.wav', '.mp3', '.m4a',
+        # '.wav', '.mp3', '.m4a',
         # Archives
-        '.zip', '.epub'
+        # '.zip', '.epub'
     }
 
     def __init__(self, enable_plugins: bool = False):
         """Initialize the content extractor"""
-        self.markitdown = MarkItDown(enable_plugins=enable_plugins)
+        client = OpenAI()
+        self.markitdown = MarkItDown(llm_client=client, llm_model="gpt-4o", enable_plugins=enable_plugins)
         self.stats = {
             'files_processed': 0,
             'successful_extractions': 0,

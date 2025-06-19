@@ -92,7 +92,7 @@ class DatabaseManager:
             chunk_overlap INTEGER DEFAULT 0,
             start_position INTEGER,
             end_position INTEGER,
-            metadata JSONB,
+            file_directory TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -137,7 +137,7 @@ class DatabaseManager:
         CREATE INDEX IF NOT EXISTS idx_chunks_index ON content_chunks(chunk_index);
         CREATE INDEX IF NOT EXISTS idx_chunks_type ON content_chunks(chunk_type);
         CREATE INDEX IF NOT EXISTS idx_chunks_method ON content_chunks(chunk_method);
-        CREATE INDEX IF NOT EXISTS idx_chunks_metadata ON content_chunks USING GIN(metadata);
+        CREATE INDEX IF NOT EXISTS idx_chunks_file_directory ON content_chunks(file_directory);
         """
 
         try:
@@ -294,11 +294,12 @@ class DatabaseManager:
         INSERT INTO content_chunks (
             document_content_id, file_metadata_id, chunk_index, chunk_text,
             chunk_size, chunk_method, chunk_type, chunk_overlap,
-            start_position, end_position, metadata
+            start_position, end_position, file_directory
         ) VALUES (
             %(document_content_id)s, %(file_metadata_id)s, %(chunk_index)s, %(chunk_text)s,
             %(chunk_size)s, %(chunk_method)s, %(chunk_type)s, %(chunk_overlap)s,
-            %(start_position)s, %(end_position)s, %(metadata)s
+            %(start_position)s, %(end_position)s, %(file_directory)s
+        );
         """
 
         try:
@@ -316,7 +317,7 @@ class DatabaseManager:
                     'chunk_overlap': chunk.get('chunk_overlap'),
                     'start_position': chunk.get('start_position'),
                     'end_position': chunk.get('end_position'),
-                    'metadata': json.dumps(chunk.get('metadata', {}))
+                    'file_directory': chunk.get('file_directory')
                 }
                 chunk_data.append(chunk_record)
 

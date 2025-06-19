@@ -6,7 +6,7 @@ This script extends the basic file metadata extraction to include:
 1. Content extraction using Microsoft's MarkItDown
 2. Document structure-based chunking
 3. Storage of content and chunks in PostgreSQL
-4. Optimized for career documents (resumes, job descriptions, etc.)
+4. Optimized for documents (Meetings, Reports, Presentations, etc.)
 """
 
 import argparse
@@ -38,7 +38,8 @@ def setup_logging():
 
 def convert_chunks_to_db_format(chunks: List[DocumentChunk],
                                document_content_id: int,
-                               file_metadata_id: int) -> List[Dict[str, Any]]:
+                               file_metadata_id: int,
+                               file_path: str) -> List[Dict[str, Any]]:
     """Convert DocumentChunk objects to database-compatible format"""
     chunk_records = []
 
@@ -54,7 +55,7 @@ def convert_chunks_to_db_format(chunks: List[DocumentChunk],
             'chunk_overlap': chunk.overlap_with_previous,
             'start_position': chunk.start_position,
             'end_position': chunk.end_position,
-            'metadata': chunk.metadata or {}
+            'file_directory': file_path
         }
         chunk_records.append(chunk_record)
 
@@ -93,13 +94,18 @@ def process_file_for_rag(file_metadata: Dict[str, Any],
         content_data = content_extractor.extract_content(file_path)
         if not content_data:
             processing_stats['error'] = f"Failed to extract content from: {file_path}"
+            logger.debug(f"[DEBUG] Extraction failed or returned no content for: {file_path}")
             return processing_stats
+
+        logger.debug(f"[DEBUG] Extracted content length for {file_path}: {len(content_data.get('content_text', ''))}")
+
+        if len(content_data['content_text'].strip()) < 200:
+            logger.debug(f"[DEBUG] Content for {file_path} is very short:\n{content_data['content_text'].strip()}")
 
         processing_stats['content_extracted'] = True
 
-        # Detect document type for better chunking
-        doc_type = chunker._detect_document_type(content_data['content_text'], file_path)
-        content_data['document_type'] = doc_type
+        # Set document_type to None (no detection implemented)
+        content_data['document_type'] = None
 
         # Insert document content into database
         document_content_id = db_manager.insert_document_content(file_metadata_id, content_data)
@@ -108,13 +114,15 @@ def process_file_for_rag(file_metadata: Dict[str, Any],
             return processing_stats
 
         # Chunk the document
-        chunks = chunker.chunk_document(content_data['content_text'], file_path)
+        parent_directory = file_metadata.get('parent_directory', '')
+        chunks = chunker.chunk_document(content_data['content_text'], file_path, parent_directory)
+        logger.debug(f"[DEBUG] Number of chunks created for {file_path}: {len(chunks)}")
         if not chunks:
             processing_stats['error'] = f"No chunks created for: {file_path}"
             return processing_stats
 
         # Convert chunks to database format
-        chunk_records = convert_chunks_to_db_format(chunks, document_content_id, file_metadata_id)
+        chunk_records = convert_chunks_to_db_format(chunks, document_content_id, file_metadata_id, file_path)
 
         # Insert chunks into database
         if db_manager.insert_content_chunks(chunk_records):
